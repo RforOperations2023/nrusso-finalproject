@@ -13,6 +13,8 @@ library(shinythemes)
 library(sf)
 library(geojsonsf)
 library(htmltools)
+library(tools)
+str(df)
 
 df <- read_csv('IncHousing.csv')
 #reading in geojson us map for base leaflet
@@ -58,7 +60,7 @@ ui <- navbarPage("Inclusionary Housing Policies in the US",
                  tabPanel("Scatterplot",
                    sidebarLayout(
                    sidebarPanel(
-                     selectInput("scatterplotx",
+                     selectInput(inputId = "scatterplotx",
                                   "select data to view for scatterplot:",
                                   choices = c("Total Affordable Rental Units"
                                               = "TotalAffordableRentalUnits",
@@ -68,7 +70,7 @@ ui <- navbarPage("Inclusionary Housing Policies in the US",
                                               = "TotalAffordableUnits"),
                                   selected = "TotalAffordableRentalUnits"
                      ),
-                     selectInput("scatterploty",
+                     selectInput(inputId = "scatterploty",
                                  "select data to view for scatterplot:",
                                  choices = c("Total Affordable Rental Units"
                                              = "TotalAffordableRentalUnits",
@@ -81,9 +83,26 @@ ui <- navbarPage("Inclusionary Housing Policies in the US",
                    # plot Panel
                    mainPanel(
                      plotlyOutput("scatter")
-                   )
-                   )
-                 )
+                   ))
+                 ),
+                 tabPanel("Bar Chart",
+                          sidebarLayout(
+                            sidebarPanel(
+                              selectInput(inputId = "bar",
+                                          "select data to view for bar chart:",
+                                          choices = c("Total Affordable Rental Units"
+                                                      = "TotalAffordableRentalUnits",
+                                                      "Total Affordable Ownership Units" 
+                                                      = "TotalAffordableOwnershipUnits",
+                                                      "Total Affordable nits" 
+                                                      = "TotalAffordableUnits"),
+                                          selected = "TotalAffordableRentalUnits")
+                            ),
+                            mainPanel(
+                              plotlyOutput("bar"))
+                            ))
+                            
+                 
 )
 #info for this comes form https://rstudio.github.io/leaflet/choropleths.html
 server <- function(input, output, session) {
@@ -118,7 +137,7 @@ server <- function(input, output, session) {
                  position = "bottomright")
     
   })
-  
+  #data table
   output$table <- DT::renderDataTable(
 
       DT::datatable(data = df[,c( "ProgramName", "City", "State",
@@ -127,6 +146,8 @@ server <- function(input, output, session) {
                     options = list(pageLength = 50), 
                     rownames = FALSE))
   
+  
+  #scatterplot
   output$scatter <- renderPlotly({
     dat <- subset(df, !is.na(TotalAffordableUnits))
     dat <- subset(df, !is.na( TotalAffordableOwnershipUnits))
@@ -134,11 +155,27 @@ server <- function(input, output, session) {
     plt <- dat[, c("TotalAffordableUnits", "TotalAffordableOwnershipUnits",
                     "TotalAffordableRentalUnits")]
     plt[is.na(plt)] <- 0
-    
+
     ggplotly(
       ggplot()) +
-        geom_point(data = plt, aes_string(x = input$scatterplotx, y = input$scatterploty,
+        geom_point(data = plt, aes_string(x = input$scatterplotx,
+                                          y = input$scatterploty,
                               color = 'blue'))
+    
+  })
+  
+  
+  output$bar <- renderPlotly({
+    dat <- subset(df, !is.na(TotalAffordableUnits))
+    dat <- subset(df, !is.na( TotalAffordableOwnershipUnits))
+    dat <- subset(df, !is.na( TotalAffordableRentalUnits))
+    plt <- dat[, c("TotalAffordableUnits", "TotalAffordableOwnershipUnits",
+                   "TotalAffordableRentalUnits", "name")]
+    plt[is.na(plt)] <- 0
+    
+    plot_ly(plt, x = ~name, y = input$bar, type = 'bar',
+            name = 'Genre Sales by Platform',
+            marker = list(color = 'blue'))
     
   })
 
